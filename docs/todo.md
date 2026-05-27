@@ -211,15 +211,15 @@ data/processed/val.bin
 
 ---
 
-## 7. DataLoaderを作る
+## 7. DataLoader を作る
 
 `src/dataset.py` または `train.py` 内に作る。
 
-- [ ] `train.bin` / `val.bin` を `np.memmap` で読む
-- [ ] ランダム位置から `block_size + 1` 個の token を切り出す
-- [ ] `x = tokens[i : i + block_size]`
-- [ ] `y = tokens[i + 1 : i + 1 + block_size]`
-- [ ] GPU に転送する
+- [x] `train.bin` / `val.bin` を `np.memmap` で読む
+- [x] ランダム位置から `block_size + 1` 個の token を切り出す
+- [x] `x = tokens[i : i + block_size]`
+- [x] `y = tokens[i + 1 : i + 1 + block_size]`
+- [x] GPU に転送する
 
 初期設定:
 
@@ -231,9 +231,14 @@ gradient_accumulation_steps = 8
 
 成功条件:
 
-- [ ] `x.shape == (batch_size, block_size)`
-- [ ] `y.shape == (batch_size, block_size)`
-- [ ] `y` が `x` の1トークン先になっている
+- [x] `x.shape == (batch_size, block_size)`
+- [x] `y.shape == (batch_size, block_size)`
+- [x] `y` が `x` の1トークン先になっている
+
+確認済み:
+
+- [x] `train_small.bin` / `val_small.bin` で DataLoader の動作確認ができる
+- [ ] `train.bin` / `val.bin` で DataLoader の動作確認ができる
 
 ---
 

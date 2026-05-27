@@ -97,3 +97,26 @@ python src/prepare_data.py
 ```bash
 python src/prepare_data.py --help
 ```
+
+# dataset.py: train.bin / val.bin から学習用バッチを作る
+
+開発用の小さい `.bin` で DataLoader の動作を確認する。
+
+```bash
+python src/dataset.py \
+  --train-bin data/processed/train_small.bin \
+  --val-bin data/processed/val_small.bin \
+  --device cuda
+```
+
+全データの `.bin` で DataLoader の動作を確認する。
+
+```bash
+python src/dataset.py
+```
+
+`dataset.py` のオプションを見る。
+
+```bash
+python src/dataset.py --help
+```
