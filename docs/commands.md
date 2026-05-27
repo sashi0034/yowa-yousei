@@ -120,3 +120,29 @@ python src/dataset.py
 ```bash
 python src/dataset.py --help
 ```
+
+# model.py: GPTモデル本体の動作確認
+
+軽い設定で forward / loss 計算を確認する。
+
+```bash
+python src/model.py \
+  --block-size 16 \
+  --batch-size 2 \
+  --n-layer 2 \
+  --n-head 2 \
+  --n-embd 64 \
+  --device cuda
+```
+
+todo.md 記載に近い構成で確認する (メモリを抑えるため、確認時だけ `batch-size` を小さくしている)。
+
+```bash
+python src/model.py --batch-size 1 --device cpu
+```
+
+`model.py` のオプションを見る。
+
+```bash
+python src/model.py --help
+```

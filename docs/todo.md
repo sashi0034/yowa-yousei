@@ -259,15 +259,15 @@ dropout = 0.1
 
 実装TODO:
 
-- [ ] Token Embedding
-- [ ] Position Embedding
-- [ ] Transformer Block
-- [ ] Causal Self-Attention
-- [ ] Feed Forward
-- [ ] LayerNorm
-- [ ] LM Head
-- [ ] causal mask
-- [ ] forwardで `logits` と `loss` を返す
+- [x] Token Embedding
+- [x] Position Embedding
+- [x] Transformer Block
+- [x] Causal Self-Attention
+- [x] Feed Forward
+- [x] LayerNorm
+- [x] LM Head
+- [x] causal mask
+- [x] forwardで `logits` と `loss` を返す
 
 損失:
 
@@ -280,9 +280,15 @@ loss = F.cross_entropy(
 
 成功条件:
 
-- [ ] `model(x, y)` が通る
-- [ ] `logits.shape == (batch_size, block_size, vocab_size)`
-- [ ] 初期lossがだいたい `log(32000) ≒ 10.37` 付近になる
+- [x] `model(x, y)` が通る
+- [x] `logits.shape == (batch_size, block_size, vocab_size)`
+- [x] 初期lossがだいたい `log(32000) ≒ 10.37` 付近になる
+
+確認済み:
+
+- [x] 軽量設定で `logits.shape == (2, 16, 32000)` / `loss == 10.3731`
+- [x] 初期設定のモデル幅で `logits.shape == (1, 512, 32000)` / `loss == 10.5075`
+- [x] `train.bin` 由来の小さいバッチで `model(x, y)` が通る
 
 ---
 
