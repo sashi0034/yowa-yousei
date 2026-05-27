@@ -3,7 +3,8 @@
 必要なライブラリをインストールする。
 
 ```bash
-pip install torch sentencepiece numpy tqdm
+python3 -m venv .venv
+.venv/bin/python -m pip install torch sentencepiece numpy tqdm
 ```
 
 # clean_text.py: data/raw から data/processed/clean.txt を作成
@@ -38,4 +39,26 @@ python3 src/split_data.py
 
 ```bash
 python3 src/split_data.py --help
+```
+
+# train_tokenizer.py: train.txt から SentencePiece モデル作成
+
+開発用の小さいデータでトークナイザ学習を試す。
+
+```bash
+.venv/bin/python src/train_tokenizer.py \
+  --input data/processed/train_small.txt \
+  --model-prefix tokenizer/yowa_yousei_sp_small
+```
+
+全 train データでトークナイザを学習する。
+
+```bash
+.venv/bin/python src/train_tokenizer.py
+```
+
+`train_tokenizer.py` のオプションを見る。
+
+```bash
+.venv/bin/python src/train_tokenizer.py --help
 ```

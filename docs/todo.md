@@ -119,12 +119,12 @@ data/processed/val.txt
 
 `src/train_tokenizer.py` を作る。
 
-- [ ] `train.txt` から SentencePiece モデルを学習する
-- [ ] `vocab_size = 32000`
-- [ ] `model_type = unigram`
-- [ ] `character_coverage = 0.9995`
-- [ ] `byte_fallback = true`
-- [ ] 特殊トークンを固定する
+- [x] `train.txt` や `train_small.txt` から SentencePiece モデルを学習する
+- [x] `vocab_size = 32000`
+- [x] `model_type = unigram`
+- [x] `character_coverage = 0.9995`
+- [x] `byte_fallback = true`
+- [x] 特殊トークンを固定する
 
 ```text
 unk_id = 0
@@ -136,8 +136,10 @@ pad_id = 3
 出力:
 
 ```text
-tokenizer/jp_sp.model
-tokenizer/jp_sp.vocab
+tokenizer/yowa_yousei_sp.model       # train.txt で作る通常版
+tokenizer/yowa_yousei_sp.vocab
+tokenizer/yowa_yousei_sp_small.model # train_small.txt で作る軽量確認版
+tokenizer/yowa_yousei_sp_small.vocab
 ```
 
 コマンド例:
@@ -145,7 +147,7 @@ tokenizer/jp_sp.vocab
 ```bash
 spm_train \
   --input=data/processed/train.txt \
-  --model_prefix=tokenizer/jp_sp \
+  --model_prefix=tokenizer/yowa_yousei_sp \
   --vocab_size=32000 \
   --model_type=unigram \
   --character_coverage=0.9995 \
@@ -158,9 +160,9 @@ spm_train \
 
 成功条件:
 
-- [ ] `jp_sp.model` が生成される
-- [ ] 日本語文を encode / decode できる
-- [ ] decode 結果が大きく崩れない
+- [x] `yowa_yousei_sp_small.model` が生成される
+- [x] 日本語文を encode / decode できる
+- [x] decode 結果が大きく崩れない
 
 確認用:
 
@@ -168,7 +170,7 @@ spm_train \
 import sentencepiece as spm
 
 sp = spm.SentencePieceProcessor()
-sp.load("tokenizer/jp_sp.model")
+sp.load("tokenizer/yowa_yousei_sp.model")
 
 text = "彼女は静かに笑った。"
 ids = sp.encode(text, out_type=int)
@@ -419,7 +421,7 @@ TODO:
 ```text
 [ ] clean.txt ができた
 [ ] train.txt / val.txt ができた
-[ ] jp_sp.model ができた
+[ ] yowa_yousei_sp.model ができた
 [ ] train.bin / val.bin ができた
 [ ] get_batch() が動いた
 [ ] model(x, y) が動いた
