@@ -96,6 +96,7 @@ NOTE:
 `src/split_data.py` を作る。
 
 - [ ] `clean.txt` を `train.txt` と `val.txt` に分ける
+- [ ] しかし、`clean.txt` はサイズが非常に大きいため、開発効率化のために `train_small.txt`, `val_small.txt` を作る。
 - [ ] だいたい `train:val = 99:1` か `98:2`
 - [ ] 作品単位・話単位で分けられるなら、ランダムな行単位ではなく話単位で分ける
 
