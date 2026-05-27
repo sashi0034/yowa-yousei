@@ -146,3 +146,46 @@ python src/model.py --batch-size 1 --device cpu
 ```bash
 python src/model.py --help
 ```
+
+# train.py: GPTモデルを学習する
+
+まずは CPU でもすぐ終わる小型設定で、学習ループと checkpoint 保存を確認する。
+
+```bash
+python src/train.py \
+  --train-bin data/processed/train_small.bin \
+  --val-bin data/processed/val_small.bin \
+  --out-dir checkpoints/debug \
+  --block-size 16 \
+  --batch-size 2 \
+  --n-layer 2 \
+  --n-head 2 \
+  --n-embd 64 \
+  --max-steps 2 \
+  --eval-interval 1 \
+  --eval-iters 1 \
+  --gradient-accumulation-steps 2 \
+  --log-interval 1 \
+  --device cpu
+```
+
+GPU で初期設定の学習を始める。
+
+```bash
+python src/train.py --device cuda
+```
+
+GPU メモリが足りない場合は、まず `batch-size` を下げる。
+
+```bash
+python src/train.py \
+  --device cuda \
+  --batch-size 4 \
+  --gradient-accumulation-steps 16
+```
+
+`train.py` のオプションを見る。
+
+```bash
+python src/train.py --help
+```

@@ -296,16 +296,16 @@ loss = F.cross_entropy(
 
 `src/train.py` を作る。
 
-- [ ] AdamW を使う
-- [ ] learning rate を `3e-4` から始める
-- [ ] warmupを 入れる
-- [ ] cosine decay を入れる
-- [ ] gradient accumulation を入れる
-- [ ] gradient clipping を入れる
-- [ ] AMPを入れる
+- [x] AdamW を使う
+- [x] learning rate を `3e-4` から始める
+- [x] warmupを 入れる
+- [x] cosine decay を入れる
+- [x] gradient accumulation を入れる
+- [x] gradient clipping を入れる
+- [x] AMPを入れる
   - NVIDIA GPU なら `bf16` または `fp16`
-- [ ] 定期的に validation loss を計算する
-- [ ] checkpoint 保存する
+- [x] 定期的に validation loss を計算する
+- [x] checkpoint 保存する
 
 初期設定:
 
@@ -323,8 +323,14 @@ warmup_steps = 1000
 
 - [ ] loss が `10.3 → 8 → 6 → 5...` のように下がる
 - [ ] train loss だけでなく val loss も下がる
-- [ ] checkpoint が保存される
+- [x] checkpoint が保存される
 - [ ] GPU メモリが破裂しない
+
+確認済み:
+
+- [x] 小型設定で2step学習が通る
+- [x] train / val loss を表示できる
+- [x] `best.pt` / `latest.pt` を保存できる
 
 ---
 
