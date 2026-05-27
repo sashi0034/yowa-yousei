@@ -43,9 +43,9 @@ pip install wandb safetensors
 
 ## 2. 生データを置く
 
-- [ ] 日本語文章データを `data/raw/*.txt` にまとめる
+- [x] 日本語文章データを `data/raw/*.txt` にまとめる
 - [ ] 冗長なデータを削除
-- [ ] 区切りには `<eos>` 相当を使う想定にする?
+- [x] 区切りには `<eos>` 相当を使う想定にする?
 
 例:
 
@@ -63,14 +63,14 @@ pip install wandb safetensors
 
 `src/clean_text.py` を作る。
 
-- [ ] Unicode正規化 `NFKC` により、全角英数字・半角カナ・互換文字を正規化する
-- [ ] HTMLタグや制御文字除去
-- [ ] ルビ表記の除去または簡易変換
-- [ ] メタ文章を可能な範囲で除去
-- [ ] 余計な空白の整理
-- [ ] 出力を `data/processed/clean/*.txt` に保存する
-- [ ] 結合したものを `data/processed/clean.txt` として作成
-- [ ] 区切りは以下のようにしたい
+- [x] Unicode正規化 `NFKC` により、全角英数字・半角カナ・互換文字を正規化する
+- [x] HTMLタグや制御文字除去
+- [x] ルビ表記の除去または簡易変換
+- [x] メタ文章を可能な範囲で除去
+- [x] 余計な空白の整理
+- [x] 出力を `data/processed/clean/*.txt` に保存する
+- [x] 結合したものを `data/processed/clean.txt` として作成
+- [x] 区切りは以下のようにしたい
 
 ```
 <title>作品タイトル</title>
@@ -81,9 +81,9 @@ pip install wandb safetensors
 
 成功条件:
 
-- [ ] `clean/*.txt` を目視して、本文として読める
-- [ ] 変なメタ文が大量に残っていない
-- [ ] 文字化けがない
+- [x] `clean/*.txt` を目視して、本文として読める
+- [x] 変なメタ文が大量に残っていない
+- [x] 文字化けがない
 
 NOTE:
 
@@ -95,10 +95,10 @@ NOTE:
 
 `src/split_data.py` を作る。
 
-- [ ] `clean.txt` を `train.txt` と `val.txt` に分ける
-- [ ] しかし、`clean.txt` はサイズが非常に大きいため、開発効率化のために `train_small.txt`, `val_small.txt` を作る。
-- [ ] だいたい `train:val = 99:1` か `98:2`
-- [ ] 作品単位・話単位で分けられるなら、ランダムな行単位ではなく話単位で分ける
+- [x] `clean.txt` を `train.txt` と `val.txt` に分ける
+- [x] しかし、`clean.txt` はサイズが非常に大きいため、開発効率化のために `train_small.txt`, `val_small.txt` を作る。
+- [x] だいたい `train:val = 99:1` か `98:2`
+- [x] 作品単位・話単位で分けられるなら、ランダムな行単位ではなく話単位で分ける
 
 出力:
 
@@ -109,9 +109,9 @@ data/processed/val.txt
 
 成功条件:
 
-- [ ] `train.txt` が大半のデータを含む
-- [ ] `val.txt` が学習に混ざっていない
-- [ ] `val.txt` でも自然な日本語が読める
+- [x] `train.txt` が大半のデータを含む
+- [x] `val.txt` が学習に混ざっていない
+- [x] `val.txt` でも自然な日本語が読める
 
 ---
 

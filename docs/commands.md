@@ -23,3 +23,15 @@ python3 src/clean_text.py --reset
 ```bash
 python3 src/clean_text.py --help
 ```
+
+クリーニング済みコーパスを train / val に分割する。
+
+```bash
+python3 src/split_data.py
+```
+
+`split_data.py` のオプションを見る。
+
+```bash
+python3 src/split_data.py --help
+```
