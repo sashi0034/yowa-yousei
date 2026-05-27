@@ -6,22 +6,12 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+import sentencepiece as spm
 
 
 DEFAULT_INPUT_PATH = Path("data/processed/train.txt")
 DEFAULT_MODEL_PREFIX = Path("tokenizer/yowa_yousei_sp")
 DEFAULT_SELF_TEST_TEXT = "彼女は静かに笑った。"
-
-
-def import_sentencepiece():
-    try:
-        import sentencepiece as spm
-    except ModuleNotFoundError as exc:
-        raise SystemExit(
-            "sentencepiece is not installed. Run: "
-            ".venv/bin/python -m pip install sentencepiece"
-        ) from exc
-    return spm
 
 
 def train_tokenizer(
@@ -41,7 +31,6 @@ def train_tokenizer(
         raise SystemExit("--vocab-size must be positive")
 
     model_prefix.parent.mkdir(parents=True, exist_ok=True)
-    spm = import_sentencepiece()
 
     args = {
         "input": str(input_path),
@@ -85,7 +74,6 @@ def run_self_test(model_path: Path, text: str) -> None:
     if not model_path.exists():
         raise SystemExit(f"model was not generated: {model_path}")
 
-    spm = import_sentencepiece()
     processor = spm.SentencePieceProcessor()
     processor.load(str(model_path))
 
@@ -103,8 +91,7 @@ def run_self_test(model_path: Path, text: str) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Train tokenizer/yowa_yousei_sp.model and "
-            "tokenizer/yowa_yousei_sp.vocab."
+            "Train tokenizer/yowa_yousei_sp.model and tokenizer/yowa_yousei_sp.vocab."
         )
     )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT_PATH)
