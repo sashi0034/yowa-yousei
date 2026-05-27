@@ -44,6 +44,7 @@ pip install wandb safetensors
 ## 2. 生データを置く
 
 - [ ] 日本語文章データを `data/raw/*.txt` にまとめる
+- [ ] 冗長なデータを削除
 - [ ] 区切りには `<eos>` 相当を使う想定にする?
 
 例:
@@ -62,19 +63,31 @@ pip install wandb safetensors
 
 `src/clean_text.py` を作る。
 
-- [ ] Unicode正規化 `NFKC`
+- [ ] Unicode正規化 `NFKC` により、全角英数字・半角カナ・互換文字を正規化する
 - [ ] HTMLタグや制御文字除去
-- [ ] 余計な空白の整理
 - [ ] ルビ表記の除去または簡易変換
 - [ ] メタ文章を可能な範囲で除去
-- [ ] 出力を `data/processed/clean.txt` に保存する
-- [ ] 区切りには `<eos>` 相当を使う想定にする
+- [ ] 余計な空白の整理
+- [ ] 出力を `data/processed/clean/*.txt` に保存する
+- [ ] 結合したものを `data/processed/clean.txt` として作成
+- [ ] 区切りは以下のようにしたい
+
+```
+<title>作品タイトル</title>
+<chapter>話タイトル</chapter>
+本文
+<eos>
+```
 
 成功条件:
 
-- [ ] `clean.txt` を目視して、本文として読める
+- [ ] `clean/*.txt` を目視して、本文として読める
 - [ ] 変なメタ文が大量に残っていない
 - [ ] 文字化けがない
+
+NOTE:
+
+- 場面転換を複数空行で行っている小説があった気がする。対応を検討したい
 
 ---
 
