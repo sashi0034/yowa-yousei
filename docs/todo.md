@@ -185,10 +185,10 @@ print(sp.decode(ids))
 
 `src/prepare_data.py` を作る。
 
-- [ ] `train.txt` を token id 列に変換する
-- [ ] `val.txt` を token id 列に変換する
-- [ ] 各話・各文書の末尾に `eos_id=2` を入れる
-- [ ] `np.uint16` で保存する
+- [x] `train.txt` を token id 列に変換する
+- [x] `val.txt` を token id 列に変換する
+- [x] 各話・各文書の末尾に `eos_id=2` を入れる
+- [x] `np.uint16` で保存する
   - `vocab_size=32000` なら `uint16` で足りる
 
 出力:
@@ -201,8 +201,13 @@ data/processed/val.bin
 成功条件:
 
 - [ ] `train.bin` と `val.bin` が生成される
-- [ ] token 数を表示できる
-- [ ] 数百トークンを decode して自然な文章に戻る
+  - 通常版 `tokenizer/yowa_yousei_sp.model` 作成後に実行する
+- [x] token 数を表示できる
+- [x] 数百トークンを decode して自然な文章に戻る
+
+確認済み:
+
+- [x] `yowa_yousei_sp_small.model` で `train_small.bin` / `val_small.bin` を生成できる
 
 ---
 

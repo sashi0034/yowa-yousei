@@ -58,8 +58,42 @@ python src/train_tokenizer.py \
 python src/train_tokenizer.py
 ```
 
+ランダムサンプリングで学習を行う。
+
+```bash
+python src/train_tokenizer.py \
+  --input-sentence-size 2000000
+```
+
 `train_tokenizer.py` のオプションを見る。
 
 ```bash
 python src/train_tokenizer.py --help
+```
+
+# prepare_data.py: train.txt / val.txt を token id の .bin に変換
+
+開発用の小さいデータで token id 変換を試す。
+これは動作確認用で、本番学習には使わない。
+
+```bash
+python src/prepare_data.py \
+  --tokenizer tokenizer/yowa_yousei_sp_small.model \
+  --train data/processed/train_small.txt \
+  --val data/processed/val_small.txt \
+  --train-output data/processed/train_small.bin \
+  --val-output data/processed/val_small.bin
+```
+
+全 train / val データを変換する。
+本番学習に使う `.bin` は通常版 `tokenizer/yowa_yousei_sp.model` で作る。
+
+```bash
+python src/prepare_data.py
+```
+
+`prepare_data.py` のオプションを見る。
+
+```bash
+python src/prepare_data.py --help
 ```
