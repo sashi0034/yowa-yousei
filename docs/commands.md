@@ -6,13 +6,15 @@
 pip install torch sentencepiece numpy tqdm
 ```
 
-先頭3ファイルだけでクリーニングを試す。
+# clean_text.py: data/raw から data/processed/clean.txt を作成
+
+先頭 3ファイルだけでクリーニングを試す。
 
 ```bash
 python3 src/clean_text.py --limit 3 --reset
 ```
 
-全rawデータをクリーニングして、個別ファイルと結合ファイルを作る。
+全 raw データをクリーニングして、個別ファイルと結合ファイルを作る。
 
 ```bash
 python3 src/clean_text.py --reset
@@ -23,6 +25,8 @@ python3 src/clean_text.py --reset
 ```bash
 python3 src/clean_text.py --help
 ```
+
+# split_data.py: data/raw から data/processed/train.txt, val.txt 作成
 
 クリーニング済みコーパスを train / val に分割する。
 
