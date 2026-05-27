@@ -338,12 +338,12 @@ warmup_steps = 1000
 
 `src/generate.py` を作る。
 
-- [ ] checkpoint を読み込む
-- [ ] SentencePiece tokenizer を読み込む
-- [ ] prompt を encode する
-- [ ] autoregressive に 1トークンずつ生成する
-- [ ] temperature sampling を入れる
-- [ ] top-k または top-p sampling を入れる
+- [x] checkpoint を読み込む
+- [x] SentencePiece tokenizer を読み込む
+- [x] prompt を encode する
+- [x] autoregressive に 1トークンずつ生成する
+- [x] temperature sampling を入れる
+- [x] top-k または top-p sampling を入れる
 
 初期設定:
 
@@ -355,9 +355,14 @@ max_new_tokens = 200
 
 成功条件:
 
-- [ ] prompt から日本語の続きを生成できる
+- [x] prompt から日本語の続きを生成できる
 - [ ] 学習が進むほど出力が自然になる
 - [ ] 同じ prompt で checkpoint ごとの差を確認できる
+
+確認済み:
+
+- [x] 小型checkpointを読み込んで生成できる
+- [x] `temperature=0.8` / `top_p=0.9` でsamplingできる
 
 ---
 

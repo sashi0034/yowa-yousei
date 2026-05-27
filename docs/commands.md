@@ -189,3 +189,43 @@ python src/train.py \
 ```bash
 python src/train.py --help
 ```
+
+# generate.py: checkpointから文章を生成する
+
+学習済み checkpoint から続きを生成する。
+
+```bash
+python src/generate.py \
+  --checkpoint checkpoints/best.pt \
+  --tokenizer tokenizer/yowa_yousei_sp.model \
+  --prompt "彼女は静かに目を覚ますと、そこは"
+```
+
+生成量や sampling を調整する。
+
+```bash
+python src/generate.py \
+  --checkpoint checkpoints/best.pt \
+  --tokenizer tokenizer/yowa_yousei_sp.model \
+  --prompt "「どうしてここにいるの？」" \
+  --max-new-tokens 200 \
+  --temperature 0.8 \
+  --top-p 0.9
+```
+
+開発用の小型checkpointを試す場合は、対応する小型tokenizerを使う。
+
+```bash
+python src/generate.py \
+  --checkpoint checkpoints/debug/latest.pt \
+  --tokenizer tokenizer/yowa_yousei_sp_small.model \
+  --prompt "彼女は静かに目を覚ますと、そこは" \
+  --max-new-tokens 50 \
+  --device cpu
+```
+
+`generate.py` のオプションを見る。
+
+```bash
+python src/generate.py --help
+```
