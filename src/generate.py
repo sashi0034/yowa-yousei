@@ -21,6 +21,9 @@ DEFAULT_PROMPT = "彼女は静かに目を覚ますと、そこは"
 DEFAULT_MAX_NEW_TOKENS = 200
 DEFAULT_TEMPERATURE = 0.8
 DEFAULT_TOP_P = 0.9
+DEFAULT_REPETITION_PENALTY = 1.15
+DEFAULT_REPETITION_WINDOW = 128
+DEFAULT_NO_REPEAT_NGRAM_SIZE = 4
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,6 +58,24 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Stop generation when the tokenizer's eos_id is sampled.",
     )
+    parser.add_argument(
+        "--repetition-penalty",
+        type=float,
+        default=DEFAULT_REPETITION_PENALTY,
+        help="Penalize recently used tokens. 1.0 disables it.",
+    )
+    parser.add_argument(
+        "--repetition-window",
+        type=int,
+        default=DEFAULT_REPETITION_WINDOW,
+        help="How many recent tokens are considered by --repetition-penalty.",
+    )
+    parser.add_argument(
+        "--no-repeat-ngram-size",
+        type=int,
+        default=DEFAULT_NO_REPEAT_NGRAM_SIZE,
+        help="Ban tokens that would repeat an n-gram. 0 disables it.",
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
         "--device",
@@ -73,6 +94,12 @@ def validate_args(args: argparse.Namespace) -> None:
         raise SystemExit("--top-p must be in (0, 1]")
     if args.top_k < 0:
         raise SystemExit("--top-k must be zero or positive")
+    if args.repetition_penalty < 1:
+        raise SystemExit("--repetition-penalty must be greater than or equal to 1")
+    if args.repetition_window < 0:
+        raise SystemExit("--repetition-window must be zero or positive")
+    if args.no_repeat_ngram_size < 0:
+        raise SystemExit("--no-repeat-ngram-size must be zero or positive")
 
 
 def load_tokenizer(path: Path) -> spm.SentencePieceProcessor:
@@ -145,6 +172,55 @@ def filter_top_p(logits: torch.Tensor, top_p: float) -> torch.Tensor:
     return logits.masked_fill(indices_to_remove, -torch.inf)
 
 
+def apply_repetition_penalty(
+    logits: torch.Tensor,
+    ids: torch.Tensor,
+    penalty: float,
+    window: int,
+) -> torch.Tensor:
+    if penalty == 1.0 or window == 0:
+        return logits
+
+    recent_ids = ids[:, -window:] if window > 0 else ids
+    for batch_index in range(logits.size(0)):
+        token_ids = set(int(token_id) for token_id in recent_ids[batch_index].tolist())
+        if not token_ids:
+            continue
+        token_indices = torch.tensor(
+            sorted(token_ids),
+            dtype=torch.long,
+            device=logits.device,
+        )
+        selected = logits[batch_index, token_indices]
+        logits[batch_index, token_indices] = torch.where(
+            selected < 0,
+            selected * penalty,
+            selected / penalty,
+        )
+    return logits
+
+
+def apply_no_repeat_ngram(
+    logits: torch.Tensor,
+    ids: torch.Tensor,
+    ngram_size: int,
+) -> torch.Tensor:
+    if ngram_size <= 1 or ids.size(1) < ngram_size - 1:
+        return logits
+
+    prefix = tuple(int(token_id) for token_id in ids[0, -(ngram_size - 1) :].tolist())
+    banned: set[int] = set()
+    token_ids = ids[0].tolist()
+    for index in range(len(token_ids) - ngram_size + 1):
+        ngram = tuple(int(token_id) for token_id in token_ids[index : index + ngram_size])
+        if ngram[:-1] == prefix:
+            banned.add(ngram[-1])
+
+    if banned:
+        logits[:, sorted(banned)] = -torch.inf
+    return logits
+
+
 @torch.no_grad()
 def generate_ids(
     model: GPT,
@@ -153,6 +229,9 @@ def generate_ids(
     temperature: float,
     top_p: float,
     top_k: int,
+    repetition_penalty: float,
+    repetition_window: int,
+    no_repeat_ngram_size: int,
     eos_id: int,
     stop_at_eos: bool,
     device: torch.device,
@@ -163,6 +242,17 @@ def generate_ids(
         idx_cond = idx[:, -model.config.block_size :]
         logits, _ = model(idx_cond)
         logits = logits[:, -1, :]
+        logits = apply_repetition_penalty(
+            logits=logits,
+            ids=idx,
+            penalty=repetition_penalty,
+            window=repetition_window,
+        )
+        logits = apply_no_repeat_ngram(
+            logits=logits,
+            ids=idx,
+            ngram_size=no_repeat_ngram_size,
+        )
 
         if temperature == 0:
             next_id = torch.argmax(logits, dim=-1, keepdim=True)
@@ -207,6 +297,9 @@ def main() -> None:
         temperature=args.temperature,
         top_p=args.top_p,
         top_k=args.top_k,
+        repetition_penalty=args.repetition_penalty,
+        repetition_window=args.repetition_window,
+        no_repeat_ngram_size=args.no_repeat_ngram_size,
         eos_id=tokenizer.eos_id(),
         stop_at_eos=args.stop_at_eos,
         device=device,

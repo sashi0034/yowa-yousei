@@ -210,7 +210,9 @@ python src/generate.py \
   --prompt "「どうしてここにいるの？」" \
   --max-new-tokens 200 \
   --temperature 0.8 \
-  --top-p 0.9
+  --top-p 0.9 \
+  --repetition-penalty 1.15 \
+  --no-repeat-ngram-size 4
 ```
 
 開発用の小型checkpointを試す場合は、対応する小型tokenizerを使う。
