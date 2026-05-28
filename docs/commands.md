@@ -98,6 +98,24 @@ python src/prepare_data.py
 python src/prepare_data.py --help
 ```
 
+# [DATA] check_data.py: 生成済みデータのタイムスタンプとサイズを確認
+
+`prepare_data.py` まで実行したあと、入力より古い出力がないか、`.bin` が `uint16` として読めるサイズかを確認する。
+
+```bash
+python src/check_data.py
+```
+
+開発用の小さい `.bin` を確認するときは、対象パスを指定する。
+
+```bash
+python src/check_data.py \
+  --tokenizer tokenizer/yowa_yousei_sp_small.model \
+  --vocab tokenizer/yowa_yousei_sp_small.vocab \
+  --train-bin data/processed/train_small.bin \
+  --val-bin data/processed/val_small.bin
+```
+
 # [debug] dataset.py: train.bin / val.bin から学習用バッチを作る
 
 開発用の小さい `.bin` で DataLoader の動作を確認する。
