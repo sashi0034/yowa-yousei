@@ -9,6 +9,8 @@ CHAPTER_SEPARATOR_TOKEN = "<chapter_sep>"
 DISPLAY_CHAPTER_SEPARATOR = "-----------------------------------------------"
 
 _DIALOGUE_RE = re.compile(r"「[^「」\n]*」")
+_UNICODE_EXCLAMATION_RE = re.compile(r"([^\x00-\x7F])!")
+_UNICODE_QUESTION_RE = re.compile(r"([^\x00-\x7F])\?")
 _NEWLINE_MARKER = "\uE000"
 
 
@@ -31,6 +33,8 @@ def _normalize_marked_newlines(text: str) -> str:
 def postprocess_generated_text(text: str) -> str:
     """Format generated text for display without changing model behavior."""
 
+    text = _UNICODE_EXCLAMATION_RE.sub(r"\1！", text)
+    text = _UNICODE_QUESTION_RE.sub(r"\1？", text)
     text = text.replace(
         CHAPTER_SEPARATOR_TOKEN,
         f"{_NEWLINE_MARKER}{DISPLAY_CHAPTER_SEPARATOR}{_NEWLINE_MARKER}",
