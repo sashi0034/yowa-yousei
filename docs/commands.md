@@ -208,6 +208,20 @@ python src/train.py \
 python src/train.py --help
 ```
 
+# [debug] inspect_checkpoint.py: checkpoint の step / loss / 設定を確認する
+
+生成せずに `best.pt` / `latest.pt` に保存された step や loss を確認する。
+
+```bash
+python src/inspect_checkpoint.py
+```
+
+`inspect_checkpoint.py` のオプションを見る。
+
+```bash
+python src/inspect_checkpoint.py --help
+```
+
 # [GENERATE] generate.py: checkpointから文章を生成する
 
 学習済み checkpoint から続きを生成する。
