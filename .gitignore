@@ -1,5 +1,8 @@
-data
 .venv/
+
 checkpoints/
+data/
+local-scripts/*
+!local-scripts/.gitkeep
 
 **/__pycache__/
