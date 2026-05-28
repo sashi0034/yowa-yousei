@@ -28,7 +28,7 @@ python src/clean_text.py --reset
 python src/clean_text.py --help
 ```
 
-# split_data.py: data/raw から data/processed/train.txt, val.txt 作成
+# split_data.py: data/processed/clean.txt から train.txt, val.txt 作成
 
 クリーニング済みコーパスを train / val に分割する。
 
