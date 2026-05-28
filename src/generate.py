@@ -13,6 +13,7 @@ import torch
 import torch.nn.functional as F
 
 from dataset import resolve_device
+from generation_postprocess import postprocess_generated_text
 from model import GPT, GPTConfig
 
 
@@ -373,7 +374,7 @@ def generate_text(
         stop_at_eos=options.stop_at_eos,
         device=bundle.device,
     )
-    return bundle.tokenizer.decode(output_ids)
+    return postprocess_generated_text(bundle.tokenizer.decode(output_ids))
 
 
 def main() -> None:
