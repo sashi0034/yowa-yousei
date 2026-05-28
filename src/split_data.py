@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Split cleaned chapter text into train/val files.
+"""Split cleaned work text into train/val files.
 
-The cleaned corpus can be large, so this script streams chapter blocks instead
+The cleaned corpus can be large, so this script streams work blocks instead
 of loading data/processed/clean.txt into memory. Blocks are expected to end with
 the literal line "<eos>".
 """
@@ -164,7 +164,7 @@ def parse_args() -> argparse.Namespace:
         "--val-ratio",
         type=float,
         default=0.01,
-        help="Approximate validation split ratio by chapter block.",
+        help="Approximate validation split ratio by work block.",
     )
     parser.add_argument("--seed", type=int, default=20240527)
     parser.add_argument(

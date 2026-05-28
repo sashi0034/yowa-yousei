@@ -4,7 +4,7 @@
 The raw files in this project are mostly concatenated web-novel chapters.
 Chapter boundaries look like "[n1234ab/1]" or
 "[episodes/1234567890 (1 / 200)]"; the first non-empty line after
-the boundary is treated as the chapter title.
+the boundary is treated as the chapter title and excluded from training text.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from typing import Iterable
 DEFAULT_RAW_DIR = Path("data/raw")
 DEFAULT_CLEAN_DIR = Path("data/processed/clean")
 DEFAULT_COMBINED_PATH = Path("data/processed/clean.txt")
+CHAPTER_SEPARATOR = "<chapter_sep>"
 
 
 CHAPTER_MARKER_RE = re.compile(
@@ -35,7 +36,6 @@ CHAPTER_MARKER_RE = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 
-RANGE_SUFFIX_RE = re.compile(r"[-_]\d+(?:[-_]\d+)?$")
 HTML_TAG_RE = re.compile(r"<[^>\n]{1,200}>")
 CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 SPACE_RE = re.compile(r"[ \t\u00a0\u2000-\u200b\u202f\u205f\u3000]+")
@@ -47,28 +47,6 @@ RUBY_AFTER_WORD_RE = re.compile(
 PAREN_KANA_RUBY_RE = re.compile(
     r"([一-龯々〆ヵヶ]{1,20})[（(]([ぁ-んァ-ヴー・ー]{1,30})[）)]"
 )
-
-META_LINE_RES = [
-    re.compile(pattern)
-    for pattern in [
-        r"^[-=＊*＿_]{3,}$",
-        r"^<+/?.*?>$",
-        r"^この作品を(応援|評価|ブックマーク)",
-        r"^作者を応援",
-        r"^応援すると応援コメントも書けます",
-        r"^新規登録で充実の読書を",
-        r"^ログイン(すると|して)",
-        r"^ブックマーク(登録|に追加|へ移動)",
-        r"^評価を(入れて|する|お願いします)",
-        r"^ポイントを入れて作者を応援",
-        r"^感想を書く$",
-        r"^レビューを書く$",
-        r"^小説家になろう$",
-        r"^カクヨム$",
-        r"^ノベルアップ[+＋]$",
-        r"^続きが気になった方はブックマーク",
-    ]
-]
 
 
 @dataclass
@@ -117,15 +95,8 @@ def clean_line(line: str) -> str:
 
 
 def is_meta_line(line: str) -> bool:
-    if not line:
-        return False
-    return any(pattern.search(line) for pattern in META_LINE_RES)
-
-
-def work_title_from_path(path: Path) -> str:
-    title = RANGE_SUFFIX_RE.sub("", path.stem)
-    title = clean_line(title)
-    return title or path.stem
+    # TODO: Revisit metadata removal once the raw-data patterns are clearer.
+    return False
 
 
 def parse_chapters(raw_text: str) -> tuple[list[Chapter], int]:
@@ -200,27 +171,22 @@ def collapse_blank_lines(lines: Iterable[str], max_blank_lines: int = 1) -> list
     return trim_blank_edges(result)
 
 
-def render_clean_text(work_title: str, chapters: Iterable[Chapter]) -> str:
+def render_clean_text(chapters: Iterable[Chapter]) -> str:
     blocks: list[str] = []
     for chapter in chapters:
         body = collapse_blank_lines(chapter.lines)
         if not body:
             continue
-        block_lines = [
-            f"<title>{work_title}</title>",
-            f"<chapter>{chapter.title}</chapter>",
-            *body,
-            "<eos>",
-        ]
-        blocks.append("\n".join(block_lines))
-    return "\n\n".join(blocks) + ("\n" if blocks else "")
+        blocks.append("\n".join(body))
+    return f"\n\n{CHAPTER_SEPARATOR}\n\n".join(blocks) + (
+        "\n<eos>\n" if blocks else ""
+    )
 
 
 def clean_file(raw_path: Path, clean_dir: Path) -> FileStats:
     raw_text = raw_path.read_text(encoding="utf-8", errors="replace")
     chapters, skipped_meta_lines = parse_chapters(raw_text)
-    work_title = work_title_from_path(raw_path)
-    clean_text = render_clean_text(work_title, chapters)
+    clean_text = render_clean_text(chapters)
 
     clean_path = clean_dir / raw_path.name
     clean_path.write_text(clean_text, encoding="utf-8", newline="\n")
