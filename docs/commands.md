@@ -8,7 +8,7 @@ source .venv/bin/activate
 python -m pip install torch sentencepiece numpy tqdm
 ```
 
-# clean_text.py: data/raw から data/processed/clean.txt を作成
+# [DATA] clean_text.py: data/raw から data/processed/clean.txt を作成
 
 先頭 3ファイルだけでクリーニングを試す。
 
@@ -28,7 +28,7 @@ python src/clean_text.py --reset
 python src/clean_text.py --help
 ```
 
-# split_data.py: data/processed/clean.txt から train.txt, val.txt 作成
+# [DATA] split_data.py: data/processed/clean.txt から train.txt, val.txt 作成
 
 クリーニング済みコーパスを train / val に分割する。
 
@@ -42,7 +42,7 @@ python src/split_data.py
 python src/split_data.py --help
 ```
 
-# train_tokenizer.py: train.txt から SentencePiece モデル作成
+# [DATA] train_tokenizer.py: train.txt から SentencePiece モデル作成
 
 開発用の小さいデータでトークナイザ学習を試す。
 
@@ -71,7 +71,7 @@ python src/train_tokenizer.py \
 python src/train_tokenizer.py --help
 ```
 
-# prepare_data.py: train.txt / val.txt を token id の .bin に変換
+# [DATA] prepare_data.py: train.txt / val.txt を token id の .bin に変換
 
 開発用の小さいデータで token id 変換を試す。
 これは動作確認用で、本番学習には使わない。
@@ -98,7 +98,7 @@ python src/prepare_data.py
 python src/prepare_data.py --help
 ```
 
-# dataset.py: train.bin / val.bin から学習用バッチを作る
+# [debug] dataset.py: train.bin / val.bin から学習用バッチを作る
 
 開発用の小さい `.bin` で DataLoader の動作を確認する。
 
@@ -121,7 +121,7 @@ python src/dataset.py
 python src/dataset.py --help
 ```
 
-# model.py: GPTモデル本体の動作確認
+# [debug] model.py: GPTモデル本体の動作確認
 
 軽い設定で forward / loss 計算を確認する。
 
@@ -147,7 +147,7 @@ python src/model.py --batch-size 1 --device cpu
 python src/model.py --help
 ```
 
-# train.py: GPTモデルを学習する
+# [DATA] train.py: GPTモデルを学習する
 
 まずは CPU でもすぐ終わる小型設定で、学習ループと checkpoint 保存を確認する。
 
@@ -190,7 +190,7 @@ python src/train.py \
 python src/train.py --help
 ```
 
-# generate.py: checkpointから文章を生成する
+# [GENERATE] generate.py: checkpointから文章を生成する
 
 学習済み checkpoint から続きを生成する。
 
