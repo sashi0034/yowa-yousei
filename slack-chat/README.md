@@ -1,8 +1,10 @@
 # slack-chat
 
-Slack のチャンネル投稿を Socket Mode で受け取り、`Q.` から始まるメッセージを `src/generate.py` の prompt として実行します。解釈したメッセージには `:heartbeat:` リアクションを付け、生成結果は同じチャンネルへ投稿します。
+Slack のチャンネル投稿を Socket Mode で受け取り、`Q.` から始まるメッセージを生成サーバの prompt として実行します。解釈したメッセージには `:heartbeat:` リアクションを付け、生成結果は同じチャンネルへ投稿します。
 
-メッセージは 1 件ずつ順番に処理します。複数の `Q.` 投稿が一気に来ても、同時に複数の `python src/generate.py` は起動しません。
+起動時に `src/generate_server.py` を 1 回だけ `spawn` し、checkpoint とトークナイザをメモリに常駐させ続けます。プロンプトのたびに Python を立ち上げ直したり、`torch.load` や `state_dict` のロードを繰り返したりしません。
+
+メッセージは 1 件ずつ順番に処理します。複数の `Q.` 投稿が一気に来ても、生成は直列に行われます。生成サーバが応答せずタイムアウトした場合はプロセスを再起動し、次のリクエストはそちらで処理します。
 
 ## セットアップ
 
@@ -19,7 +21,7 @@ SLACK_BOT_TOKEN=xoxb-...
 SLACK_APP_TOKEN=xapp-...
 
 PYTHON_BIN=python
-GENERATE_SCRIPT=src/generate.py
+GENERATE_SERVER_SCRIPT=src/generate_server.py
 CHECKPOINT_PATH=checkpoints/best.pt
 TOKENIZER_PATH=tokenizer/yowa_yousei_sp.model
 DEVICE=auto
@@ -116,14 +118,15 @@ Q. 彼女は静かに目を覚ますと、そこは
 Ｑ．彼女は静かに目を覚ますと、そこは
 ```
 
-内部では次の形で実行します。
+内部では起動時に次の形でサーバプロセスが立ち上がり、メッセージごとに stdin/stdout の JSON で prompt をやり取りします。
 
 ```bash
-python src/generate.py \
+python src/generate_server.py \
   --checkpoint checkpoints/best.pt \
-  --tokenizer tokenizer/yowa_yousei_sp.model \
-  --prompt "彼女は静かに目を覚ますと、そこは"
+  --tokenizer tokenizer/yowa_yousei_sp.model
 ```
+
+`src/generate.py` の単発 CLI は今までどおりそのまま使えます。
 
 ## 環境変数
 
@@ -131,13 +134,14 @@ python src/generate.py \
 - `SLACK_APP_TOKEN`: Socket Mode 用 App-Level Token。必須。
 - `REPO_ROOT`: リポジトリルート。未指定なら `slack-chat` の親ディレクトリ。
 - `PYTHON_BIN`: Python コマンド。既定値は `python`。
-- `GENERATE_SCRIPT`: 生成スクリプト。既定値は `src/generate.py`。
+- `GENERATE_SERVER_SCRIPT`: 生成サーバスクリプト。既定値は `src/generate_server.py`。
 - `CHECKPOINT_PATH`: checkpoint path。既定値は `checkpoints/best.pt`。
 - `TOKENIZER_PATH`: tokenizer path。既定値は `tokenizer/yowa_yousei_sp.model`。
-- `MAX_NEW_TOKENS`: `--max-new-tokens`。
-- `TEMPERATURE`: `--temperature`。
-- `TOP_P`: `--top-p`。
-- `TOP_K`: `--top-k`。
-- `DEVICE`: `--device`。
-- `STOP_AT_EOS`: `true` のとき `--stop-at-eos` を付ける。
-- `GENERATION_TIMEOUT_MS`: 1 件あたりの timeout。既定値は `300000`。
+- `MAX_NEW_TOKENS`: 起動時に `--max-new-tokens` として渡すデフォルト値。
+- `TEMPERATURE`: 起動時に `--temperature` として渡すデフォルト値。
+- `TOP_P`: 起動時に `--top-p` として渡すデフォルト値。
+- `TOP_K`: 起動時に `--top-k` として渡すデフォルト値。
+- `DEVICE`: 起動時に `--device` として渡す値。
+- `STOP_AT_EOS`: `true` のとき起動引数に `--stop-at-eos` を付ける。
+- `READY_TIMEOUT_MS`: 生成サーバが ready を返すまでの timeout。既定値は `180000`。
+- `GENERATION_TIMEOUT_MS`: 1 件あたりの timeout。既定値は `300000`。timeout 時はサーバを再起動して次のリクエストに備えます。

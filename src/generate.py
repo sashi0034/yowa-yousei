@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +22,37 @@ DEFAULT_PROMPT = "彼女は静かに目を覚ますと、そこは"
 DEFAULT_MAX_NEW_TOKENS = 200
 DEFAULT_TEMPERATURE = 0.8
 DEFAULT_TOP_P = 0.9
+DEFAULT_TOP_K = 0
 DEFAULT_REPETITION_PENALTY = 1.15
 DEFAULT_REPETITION_WINDOW = 128
 DEFAULT_NO_REPEAT_NGRAM_SIZE = 4
+DEFAULT_SEED = 0
+
+
+@dataclass(frozen=True)
+class GenerationOptions:
+    """Per-request generation parameters."""
+
+    max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
+    temperature: float = DEFAULT_TEMPERATURE
+    top_p: float = DEFAULT_TOP_P
+    top_k: int = DEFAULT_TOP_K
+    stop_at_eos: bool = False
+    repetition_penalty: float = DEFAULT_REPETITION_PENALTY
+    repetition_window: int = DEFAULT_REPETITION_WINDOW
+    no_repeat_ngram_size: int = DEFAULT_NO_REPEAT_NGRAM_SIZE
+    seed: int | None = DEFAULT_SEED
+
+
+@dataclass(frozen=True)
+class ModelBundle:
+    """Loaded model + tokenizer pair ready for repeated inference."""
+
+    model: GPT
+    tokenizer: spm.SentencePieceProcessor
+    device: torch.device
+    eos_id: int
+    metadata: dict[str, Any]
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,7 +79,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--top-k",
         type=int,
-        default=0,
+        default=DEFAULT_TOP_K,
         help="Keep only the k most likely tokens before sampling. 0 disables it.",
     )
     parser.add_argument(
@@ -76,7 +105,7 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_NO_REPEAT_NGRAM_SIZE,
         help="Ban tokens that would repeat an n-gram. 0 disables it.",
     )
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument(
         "--device",
         default="auto",
@@ -85,21 +114,35 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def validate_args(args: argparse.Namespace) -> None:
-    if args.max_new_tokens < 0:
-        raise SystemExit("--max-new-tokens must be zero or positive")
-    if args.temperature < 0:
-        raise SystemExit("--temperature must be zero or positive")
-    if args.top_p <= 0 or args.top_p > 1:
-        raise SystemExit("--top-p must be in (0, 1]")
-    if args.top_k < 0:
-        raise SystemExit("--top-k must be zero or positive")
-    if args.repetition_penalty < 1:
-        raise SystemExit("--repetition-penalty must be greater than or equal to 1")
-    if args.repetition_window < 0:
-        raise SystemExit("--repetition-window must be zero or positive")
-    if args.no_repeat_ngram_size < 0:
-        raise SystemExit("--no-repeat-ngram-size must be zero or positive")
+def validate_options(options: GenerationOptions) -> None:
+    if options.max_new_tokens < 0:
+        raise ValueError("max_new_tokens must be zero or positive")
+    if options.temperature < 0:
+        raise ValueError("temperature must be zero or positive")
+    if options.top_p <= 0 or options.top_p > 1:
+        raise ValueError("top_p must be in (0, 1]")
+    if options.top_k < 0:
+        raise ValueError("top_k must be zero or positive")
+    if options.repetition_penalty < 1:
+        raise ValueError("repetition_penalty must be greater than or equal to 1")
+    if options.repetition_window < 0:
+        raise ValueError("repetition_window must be zero or positive")
+    if options.no_repeat_ngram_size < 0:
+        raise ValueError("no_repeat_ngram_size must be zero or positive")
+
+
+def options_from_args(args: argparse.Namespace) -> GenerationOptions:
+    return GenerationOptions(
+        max_new_tokens=args.max_new_tokens,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        top_k=args.top_k,
+        stop_at_eos=args.stop_at_eos,
+        repetition_penalty=args.repetition_penalty,
+        repetition_window=args.repetition_window,
+        no_repeat_ngram_size=args.no_repeat_ngram_size,
+        seed=args.seed,
+    )
 
 
 def load_tokenizer(path: Path) -> spm.SentencePieceProcessor:
@@ -125,6 +168,37 @@ def load_model(checkpoint_path: Path, device: torch.device) -> tuple[GPT, dict[s
     model.load_state_dict(checkpoint["model"])
     model.eval()
     return model, checkpoint
+
+
+def prepare_bundle(
+    checkpoint_path: Path,
+    tokenizer_path: Path,
+    device: torch.device,
+) -> ModelBundle:
+    """Load tokenizer and model once for repeated generation."""
+
+    tokenizer = load_tokenizer(tokenizer_path)
+    model, checkpoint = load_model(checkpoint_path, device)
+
+    if tokenizer.get_piece_size() != model.config.vocab_size:
+        raise SystemExit(
+            f"tokenizer vocab size ({tokenizer.get_piece_size()}) does not match "
+            f"model vocab size ({model.config.vocab_size})"
+        )
+
+    metadata: dict[str, Any] = {}
+    if "step" in checkpoint:
+        metadata["step"] = checkpoint["step"]
+    if "val_loss" in checkpoint:
+        metadata["val_loss"] = checkpoint["val_loss"]
+
+    return ModelBundle(
+        model=model,
+        tokenizer=tokenizer,
+        device=device,
+        eos_id=tokenizer.eos_id(),
+        metadata=metadata,
+    )
 
 
 def read_prompt(args: argparse.Namespace) -> str:
@@ -270,49 +344,60 @@ def generate_ids(
     return idx[0].tolist()
 
 
+def generate_text(
+    bundle: ModelBundle,
+    prompt: str,
+    options: GenerationOptions,
+) -> str:
+    """Run a single generation against an already-loaded model bundle."""
+
+    validate_options(options)
+
+    if options.seed is not None:
+        torch.manual_seed(options.seed)
+        if bundle.device.type == "cuda":
+            torch.cuda.manual_seed_all(options.seed)
+
+    input_ids = encode_prompt(bundle.tokenizer, prompt)
+    output_ids = generate_ids(
+        model=bundle.model,
+        input_ids=input_ids,
+        max_new_tokens=options.max_new_tokens,
+        temperature=options.temperature,
+        top_p=options.top_p,
+        top_k=options.top_k,
+        repetition_penalty=options.repetition_penalty,
+        repetition_window=options.repetition_window,
+        no_repeat_ngram_size=options.no_repeat_ngram_size,
+        eos_id=bundle.eos_id,
+        stop_at_eos=options.stop_at_eos,
+        device=bundle.device,
+    )
+    return bundle.tokenizer.decode(output_ids)
+
+
 def main() -> None:
     args = parse_args()
-    validate_args(args)
+    options = options_from_args(args)
+    try:
+        validate_options(options)
+    except ValueError as error:
+        raise SystemExit(str(error))
 
     device = resolve_device(args.device)
-    torch.manual_seed(args.seed)
-    if device.type == "cuda":
-        torch.cuda.manual_seed_all(args.seed)
-
-    tokenizer = load_tokenizer(args.tokenizer)
-    model, checkpoint = load_model(args.checkpoint, device)
-
-    if tokenizer.get_piece_size() != model.config.vocab_size:
-        raise SystemExit(
-            f"tokenizer vocab size ({tokenizer.get_piece_size()}) does not match "
-            f"model vocab size ({model.config.vocab_size})"
-        )
+    bundle = prepare_bundle(args.checkpoint, args.tokenizer, device)
 
     prompt = read_prompt(args)
-    input_ids = encode_prompt(tokenizer, prompt)
-    output_ids = generate_ids(
-        model=model,
-        input_ids=input_ids,
-        max_new_tokens=args.max_new_tokens,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        top_k=args.top_k,
-        repetition_penalty=args.repetition_penalty,
-        repetition_window=args.repetition_window,
-        no_repeat_ngram_size=args.no_repeat_ngram_size,
-        eos_id=tokenizer.eos_id(),
-        stop_at_eos=args.stop_at_eos,
-        device=device,
-    )
+    text = generate_text(bundle, prompt, options)
 
     print(f"checkpoint: {args.checkpoint}")
-    if "step" in checkpoint:
-        print(f"step: {checkpoint['step']}")
-    if "val_loss" in checkpoint:
-        print(f"val loss: {checkpoint['val_loss']:.4f}")
+    if "step" in bundle.metadata:
+        print(f"step: {bundle.metadata['step']}")
+    if "val_loss" in bundle.metadata:
+        print(f"val loss: {bundle.metadata['val_loss']:.4f}")
     print(f"device: {device}")
     print()
-    print(tokenizer.decode(output_ids))
+    print(text)
 
 
 if __name__ == "__main__":

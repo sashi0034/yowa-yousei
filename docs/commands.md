@@ -247,7 +247,7 @@ python src/generate.py \
   --no-repeat-ngram-size 4
 ```
 
-開発用の小型checkpointを試す場合は、対応する小型tokenizerを使う。
+開発用の小型checkpointを試す場合は、対応する小型 tokenizer を使う。
 
 ```bash
 python src/generate.py \
