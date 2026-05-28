@@ -1,6 +1,6 @@
 # slack-chat
 
-Slack のチャンネル投稿を Socket Mode で受け取り、`Q.` から始まるメッセージを生成サーバの prompt として実行します。解釈したメッセージには `:heartbeat:` リアクションを付け、生成結果は同じチャンネルへ投稿します。
+Slack のチャンネル投稿を Socket Mode で受け取り、`Q.` から始まるメッセージを生成サーバの prompt として実行します。解釈したメッセージには保留中の印として `:heartbeat:` リアクションを付け、生成結果を同じチャンネルへ投稿した後に外します。
 
 起動時に `src/generate_server.py` を 1 回だけ `spawn` し、checkpoint とトークナイザをメモリに常駐させ続けます。プロンプトのたびに Python を立ち上げ直したり、`torch.load` や `state_dict` のロードを繰り返したりしません。
 

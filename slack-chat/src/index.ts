@@ -14,6 +14,7 @@ const { App, LogLevel } = bolt;
 type SlackClient = {
   reactions: {
     add(args: { channel: string; name: string; timestamp: string }): Promise<unknown>;
+    remove(args: { channel: string; name: string; timestamp: string }): Promise<unknown>;
   };
   chat: {
     postMessage(args: { channel: string; text: string }): Promise<unknown>;
@@ -29,6 +30,7 @@ type QueueItem = {
   channel: string;
   messageTs: string;
   prompt: string;
+  hasQueueReaction: boolean;
 };
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
@@ -74,6 +76,7 @@ const generationServer = new GenerationServer(serverConfig, serverLogger);
 const queue: QueueItem[] = [];
 const seenMessages = new Set<string>();
 const maxSeenMessages = 1_000;
+const queueReactionName = "heartbeat";
 let processing = false;
 
 app.message(async ({ message, client, logger }) => {
@@ -94,20 +97,23 @@ app.message(async ({ message, client, logger }) => {
   }
   rememberMessage(key);
 
+  let hasQueueReaction = false;
   try {
     await client.reactions.add({
       channel,
-      name: "heartbeat",
+      name: queueReactionName,
       timestamp: messageTs,
     });
+    hasQueueReaction = true;
   } catch (error) {
-    logger.warn(`failed to add heartbeat reaction: ${formatError(error)}`);
+    logger.warn(`failed to add ${queueReactionName} reaction: ${formatError(error)}`);
   }
 
   queue.push({
     channel,
     messageTs,
     prompt,
+    hasQueueReaction,
   });
 
   void drainQueue(client, logger);
@@ -154,6 +160,26 @@ async function handleQueueItem(
       channel: item.channel,
       text: `生成に失敗しました: ${formatError(error)}`,
     });
+  } finally {
+    if (item.hasQueueReaction) {
+      await removeQueueReaction(item, client, logger);
+    }
+  }
+}
+
+async function removeQueueReaction(
+  item: QueueItem,
+  client: SlackClient,
+  logger: Logger,
+): Promise<void> {
+  try {
+    await client.reactions.remove({
+      channel: item.channel,
+      name: queueReactionName,
+      timestamp: item.messageTs,
+    });
+  } catch (error) {
+    logger.warn(`failed to remove ${queueReactionName} reaction: ${formatError(error)}`);
   }
 }
 
