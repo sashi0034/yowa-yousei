@@ -11,13 +11,13 @@ from typing import Iterator
 import numpy as np
 import sentencepiece as spm
 
+from corpus_markers import EOS_MARKER
 
 DEFAULT_TOKENIZER_PATH = Path("tokenizer/yowa_yousei_sp.model")
 DEFAULT_TRAIN_PATH = Path("data/processed/train.txt")
 DEFAULT_VAL_PATH = Path("data/processed/val.txt")
 DEFAULT_TRAIN_OUTPUT_PATH = Path("data/processed/train.bin")
 DEFAULT_VAL_OUTPUT_PATH = Path("data/processed/val.bin")
-DEFAULT_EOS_MARKER = "<eos>"
 
 
 @dataclass
@@ -121,7 +121,7 @@ def decode_sample(
             if current:
                 pieces.append(processor.decode(current))
                 current = []
-            pieces.append("\n<eos>\n")
+            pieces.append(f"\n{EOS_MARKER}\n")
             continue
         current.append(token_id)
 
@@ -148,7 +148,7 @@ def print_stats(label: str, path: Path, stats: PrepareStats) -> None:
     if stats.documents_without_eos_marker:
         print(
             f"  note: added eos_id to {stats.documents_without_eos_marker} "
-            "document(s) that reached EOF without an <eos> marker"
+            f"document(s) that reached EOF without an {EOS_MARKER} marker"
         )
 
 
@@ -163,7 +163,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--val-output", type=Path, default=DEFAULT_VAL_OUTPUT_PATH)
     parser.add_argument(
         "--eos-marker",
-        default=DEFAULT_EOS_MARKER,
+        default=EOS_MARKER,
         help="Line that marks the end of one document in the text corpus.",
     )
     parser.add_argument(

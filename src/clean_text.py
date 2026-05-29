@@ -18,11 +18,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from corpus_markers import CHAPTER_SEPARATOR, EOS_MARKER
+
 
 DEFAULT_RAW_DIR = Path("data/raw")
 DEFAULT_CLEAN_DIR = Path("data/processed/clean")
 DEFAULT_COMBINED_PATH = Path("data/processed/clean.txt")
-CHAPTER_SEPARATOR = "<chapter_sep>"
 
 
 CHAPTER_MARKER_RE = re.compile(
@@ -179,7 +180,7 @@ def render_clean_text(chapters: Iterable[Chapter]) -> str:
             continue
         blocks.append("\n".join(body))
     return f"\n\n{CHAPTER_SEPARATOR}\n\n".join(blocks) + (
-        "\n<eos>\n" if blocks else ""
+        f"\n{EOS_MARKER}\n" if blocks else ""
     )
 
 

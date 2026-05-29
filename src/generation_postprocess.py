@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 
+from corpus_markers import CHAPTER_SEPARATOR
 
-CHAPTER_SEPARATOR_TOKEN = "<chapter_sep>"
 DISPLAY_CHAPTER_SEPARATOR = "-----------------------------------------------"
 
 _DIALOGUE_RE = re.compile(r"「[^「」\n]*」")
@@ -36,7 +36,7 @@ def postprocess_generated_text(text: str) -> str:
     text = _UNICODE_EXCLAMATION_RE.sub(r"\1！", text)
     text = _UNICODE_QUESTION_RE.sub(r"\1？", text)
     text = text.replace(
-        CHAPTER_SEPARATOR_TOKEN,
+        CHAPTER_SEPARATOR,
         f"{_NEWLINE_MARKER}{DISPLAY_CHAPTER_SEPARATOR}{_NEWLINE_MARKER}",
     )
     text = _mark_dialogue_line_breaks(text)
