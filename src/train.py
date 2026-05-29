@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import sys
 import time
 from contextlib import nullcontext
 from dataclasses import asdict
@@ -40,6 +41,13 @@ DEFAULT_WARMUP_STEPS = 1000
 DEFAULT_GRADIENT_ACCUMULATION_STEPS = 8
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_LOG_INTERVAL = 10
+
+
+def configure_stdio() -> None:
+   # Ensure logs appear immediately, even when stdout/stderr are redirected.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(line_buffering=True, write_through=True)
 
 
 def parse_args() -> argparse.Namespace:
@@ -206,6 +214,8 @@ def save_checkpoint(
 
 
 def main() -> None:
+    configure_stdio()
+
     args = parse_args()
     validate_args(args)
 
