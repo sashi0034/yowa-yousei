@@ -1,5 +1,6 @@
 import bolt from "@slack/bolt";
 import "dotenv/config";
+import { statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,7 +18,7 @@ type SlackClient = {
     remove(args: { channel: string; name: string; timestamp: string }): Promise<unknown>;
   };
   chat: {
-    postMessage(args: { channel: string; text: string }): Promise<unknown>;
+    postMessage(args: { channel: string; text: string; username: string }): Promise<unknown>;
   };
 };
 
@@ -72,6 +73,7 @@ const serverLogger: GenerationLogger = {
 };
 
 const generationServer = new GenerationServer(serverConfig, serverLogger);
+const botDisplayName = buildBotDisplayName(serverConfig);
 
 const queue: QueueItem[] = [];
 const seenMessages = new Set<string>();
@@ -151,6 +153,7 @@ async function handleQueueItem(
     await client.chat.postMessage({
       channel: item.channel,
       text: truncateForSlack(result || "(生成結果が空でした)"),
+      username: botDisplayName,
     });
   } catch (error) {
     logger.error(
@@ -159,6 +162,7 @@ async function handleQueueItem(
     await client.chat.postMessage({
       channel: item.channel,
       text: `生成に失敗しました: ${formatError(error)}`,
+      username: botDisplayName,
     });
   } finally {
     if (item.hasQueueReaction) {
@@ -238,6 +242,24 @@ function requiredEnv(name: string): string {
     throw new Error(`${name} is required`);
   }
   return value;
+}
+
+function buildBotDisplayName(config: GenerationServerConfig): string {
+  const checkpointPath = path.resolve(config.repoRoot, config.checkpointPath);
+  const timestamp = formatFileTimestamp(statSync(checkpointPath).mtime);
+  return `yowa_yousei | ${timestamp}`;
+}
+
+function formatFileTimestamp(date: Date): string {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join("-");
 }
 
 function formatError(error: unknown): string {

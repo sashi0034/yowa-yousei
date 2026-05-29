@@ -51,6 +51,7 @@ App-Level Token:
 Bot Token Scopes:
 
 - `chat:write`
+- `chat:write.customize`
 - `reactions:write`
 - `channels:history` public channel の投稿を読む場合
 - `groups:history` private channel の投稿を読む場合
@@ -84,6 +85,7 @@ oauth_config:
   scopes:
     bot:
       - chat:write
+      - chat:write.customize
       - reactions:write
       - channels:history
       - groups:history
