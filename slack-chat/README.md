@@ -2,7 +2,7 @@
 
 Slack のチャンネル投稿を Socket Mode で受け取り、`Q.` から始まるメッセージを生成サーバの prompt として実行します。解釈したメッセージには保留中の印として `:heartbeat:` リアクションを付け、生成結果を同じチャンネルへ投稿した後に外します。
 
-起動時に `src/generate_server.py` を 1 回だけ `spawn` し、checkpoint とトークナイザをメモリに常駐させ続けます。プロンプトのたびに Python を立ち上げ直したり、`torch.load` や `state_dict` のロードを繰り返したりしません。
+最初のプロンプト受信時に `src/generate_server.py` を `spawn` し、checkpoint とトークナイザをメモリに常駐させ続けます。プロンプトのたびに Python を立ち上げ直したり、`torch.load` や `state_dict` のロードを繰り返したりしません。一定時間（既定 10 分）メッセージが来ないと常駐 Python プロセスを停止し、次の `Q.` 投稿が来たときに自動で再起動します。アイドル時間は `IDLE_SHUTDOWN_MS` で調整できます。
 
 メッセージは 1 件ずつ順番に処理します。複数の `Q.` 投稿が一気に来ても、生成は直列に行われます。生成サーバが応答せずタイムアウトした場合はプロセスを再起動し、次のリクエストはそちらで処理します。
 
@@ -147,3 +147,4 @@ python src/generate_server.py \
 - `STOP_AT_EOS`: `true` のとき起動引数に `--stop-at-eos` を付ける。
 - `READY_TIMEOUT_MS`: 生成サーバが ready を返すまでの timeout。既定値は `180000`。
 - `GENERATION_TIMEOUT_MS`: 1 件あたりの timeout。既定値は `300000`。timeout 時はサーバを再起動して次のリクエストに備えます。
+- `IDLE_SHUTDOWN_MS`: 最後のリクエストからこの時間メッセージが来ないと常駐 Python プロセスを停止します。既定値は `600000`（10 分）。次のリクエスト受信時に自動で再起動します。

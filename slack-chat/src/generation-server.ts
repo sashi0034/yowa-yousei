@@ -14,6 +14,7 @@ export type GenerationServerConfig = {
   stopAtEos: boolean;
   readyTimeoutMs: number;
   requestTimeoutMs: number;
+  idleTimeoutMs: number;
 };
 
 export type GenerationLogger = {
@@ -37,6 +38,7 @@ export class GenerationServer {
   private resolveReady: (() => void) | null = null;
   private rejectReady: ((error: Error) => void) | null = null;
   private readyTimer: NodeJS.Timeout | null = null;
+  private idleTimer: NodeJS.Timeout | null = null;
   private shuttingDown = false;
 
   constructor(
@@ -45,6 +47,7 @@ export class GenerationServer {
   ) {}
 
   async generate(prompt: string): Promise<string> {
+    this.clearIdleTimer();
     await this.ensureReady();
     const child = this.child;
     if (child === null || child.stdin === null || child.stdin.destroyed) {
@@ -82,7 +85,36 @@ export class GenerationServer {
 
   shutdown(): void {
     this.shuttingDown = true;
+    this.clearIdleTimer();
     this.reset("shutdown requested");
+  }
+
+  private scheduleIdleShutdownIfQuiet(): void {
+    if (this.pending.size > 0) {
+      return;
+    }
+    this.clearIdleTimer();
+    if (this.child === null) {
+      return;
+    }
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      if (this.pending.size > 0 || this.child === null) {
+        return;
+      }
+      this.logger.info(
+        `no requests for ${this.config.idleTimeoutMs}ms, stopping generation server`,
+      );
+      this.reset(`idle for ${this.config.idleTimeoutMs}ms`);
+    }, this.config.idleTimeoutMs);
+    this.idleTimer.unref?.();
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer !== null) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
   }
 
   private async ensureReady(): Promise<void> {
@@ -226,6 +258,7 @@ export class GenerationServer {
     }
     clearTimeout(pending.timer);
     this.pending.delete(id);
+    this.scheduleIdleShutdownIfQuiet();
     if (message.ok === true) {
       const text = typeof message.text === "string" ? message.text : "";
       pending.resolve(text);
@@ -254,6 +287,7 @@ export class GenerationServer {
   }
 
   private fail(error: Error): void {
+    this.clearIdleTimer();
     if (this.readyTimer !== null) {
       clearTimeout(this.readyTimer);
       this.readyTimer = null;

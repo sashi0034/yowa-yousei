@@ -51,6 +51,7 @@ const serverConfig: GenerationServerConfig = {
   stopAtEos: parseBoolean(process.env.STOP_AT_EOS, false),
   readyTimeoutMs: parsePositiveInt(process.env.READY_TIMEOUT_MS, 180_000),
   requestTimeoutMs: parsePositiveInt(process.env.GENERATION_TIMEOUT_MS, 300_000),
+  idleTimeoutMs: parsePositiveInt(process.env.IDLE_SHUTDOWN_MS, 600_000),
 };
 
 const app = new App({
