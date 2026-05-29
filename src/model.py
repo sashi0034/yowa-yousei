@@ -79,6 +79,8 @@ class CausalSelfAttention(nn.Module):
         """
 
         batch_size, seq_len, embd_size = x.size()
+
+        # かの有名な 'Attention'
         # 1 回の線形層で Query/Key/Value をまとめて作り、後で 3 つに分ける。
         # Query は「何を探すか」、Key は「各位置が持つ手がかり」、Value は「集める情報」。
         q, k, v = self.c_attn(x).split(embd_size, dim=2)
@@ -90,7 +92,7 @@ class CausalSelfAttention(nn.Module):
         v = v.view(batch_size, seq_len, self.n_head, self.head_size).transpose(1, 2)
 
         # Query と Key の内積が「どの過去位置をどれだけ見るか」のスコアになる。
-        # sqrt(head_size) で割るのは、内積が大きくなりすぎて softmax が極端になるのを防ぐため。
+        # sqrt(head_size) で割るのは、'スケール化'。内積が大きくなりすぎて softmax が極端になるのを防ぐ。
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(self.head_size))
         mask = self.causal_mask[:, :, :seq_len, :seq_len]
         att = att.masked_fill(mask == 0, -torch.inf)
