@@ -278,6 +278,24 @@ def split_data(
 
             # Current behavior: split each work and sample val parts from within it.
             parts = split_work_parts(block)
+            if len(parts) <= 1:
+                rendered_block = render_document(parts)
+                if not rendered_block:
+                    continue
+                if should_use_val(block, val_ratio, seed):
+                    write_val_block(
+                        val_file, val_small_file, stats, rendered_block, val_small_bytes
+                    )
+                else:
+                    write_train_block(
+                        train_file,
+                        train_small_file,
+                        stats,
+                        rendered_block,
+                        train_small_bytes,
+                    )
+                continue
+
             val_indices = select_val_indices(parts, val_ratio, seed)
             train_indices = set(range(len(parts))) - val_indices
 

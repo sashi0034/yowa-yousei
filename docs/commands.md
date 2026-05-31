@@ -5,10 +5,12 @@
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install torch sentencepiece numpy tqdm
+python -m pip install torch sentencepiece numpy tqdm wikiextractor
 ```
 
 # [DATA] clean_text.py: data/raw/novels から data/processed/clean.txt を作成
+
+TODO: Rename to clean_novel?
 
 先頭 3ファイルだけでクリーニングを試す。
 
@@ -26,6 +28,33 @@ python src/clean_text.py --reset
 
 ```bash
 python src/clean_text.py --help
+```
+
+# [DATA] clean_wiki.py: data/raw/wiki から wiki コーパスを作成
+
+TODO: wikiextractor の改造を行う
+
+Wikipedia XML dump を WikiExtractor JSONL に変換する。
+
+```bash
+python -m wikiextractor.WikiExtractor \
+  --json \
+  --processes 16 \
+  -o data/intermediate/wiki_extracted \
+  data/raw/wiki/jawiki-latest-pages-articles-multistream.xml.bz2
+```
+
+抽出済み JSONL を `<eos>` 区切りのテキストコーパスに変換する。
+
+```bash
+python src/clean_wiki.py
+```
+
+小説コーパスと wiki コーパスを結合する。
+
+```bash
+cat data/processed/clean.txt data/processed/wiki_clean.txt > data/processed/clean.tmp
+mv data/processed/clean.tmp data/processed/clean.txt
 ```
 
 # [DATA] split_data.py: data/processed/clean.txt から train.txt, val.txt 作成
