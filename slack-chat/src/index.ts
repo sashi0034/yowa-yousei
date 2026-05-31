@@ -290,17 +290,9 @@ function truncateForSlack(text: string): string {
   return `${text.slice(0, maxLength)}\n\n...(長すぎるため省略しました)`;
 }
 
-function shutdown(signal: NodeJS.Signals): void {
-  console.log(`received ${signal}, shutting down`);
-  generationServer.shutdown();
-  void app
-    .stop()
-    .catch((error) => console.error(`failed to stop app cleanly: ${formatError(error)}`))
-    .finally(() => process.exit(0));
-}
-
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("uncaughtException", function (err) {
+  console.error(`uncaught exception: ${formatError(err)}`);
+});
 
 await app.start();
 console.log("slack-chat is running in Socket Mode");
