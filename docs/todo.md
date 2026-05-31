@@ -43,7 +43,7 @@ pip install wandb safetensors
 
 ## 2. 生データを置く
 
-- [x] 日本語文章データを `data/raw/*.txt` にまとめる
+- [x] 日本語文章データを `data/raw/novels/*.txt` にまとめる
 - [ ] 冗長なデータを削除
 - [x] 区切りには `<eos>` 相当を使う想定にする?
 

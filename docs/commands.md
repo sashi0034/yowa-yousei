@@ -8,7 +8,7 @@ source .venv/bin/activate
 python -m pip install torch sentencepiece numpy tqdm
 ```
 
-# [DATA] clean_text.py: data/raw から data/processed/clean.txt を作成
+# [DATA] clean_text.py: data/raw/novels から data/processed/clean.txt を作成
 
 先頭 3ファイルだけでクリーニングを試す。
 

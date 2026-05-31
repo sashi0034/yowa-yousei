@@ -21,7 +21,7 @@ from typing import Iterable
 from corpus_markers import CHAPTER_SEPARATOR, EOS_MARKER
 
 
-DEFAULT_RAW_DIR = Path("data/raw")
+DEFAULT_RAW_DIR = Path("data/raw/novels")
 DEFAULT_CLEAN_DIR = Path("data/processed/clean")
 DEFAULT_COMBINED_PATH = Path("data/processed/clean.txt")
 
@@ -229,7 +229,7 @@ def combine_clean_files(clean_paths: Iterable[Path], combined_path: Path) -> int
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Clean data/raw/*.txt into chapter-formatted training text."
+        description="Clean data/raw/novels/*.txt into chapter-formatted training text."
     )
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
     parser.add_argument("--clean-dir", type=Path, default=DEFAULT_CLEAN_DIR)
