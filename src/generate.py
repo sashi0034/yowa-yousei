@@ -279,6 +279,42 @@ def encode_prompt(processor: spm.SentencePieceProcessor, prompt: str) -> list[in
     return [bos_id]
 
 
+def display_token(
+    processor: spm.SentencePieceProcessor,
+    token_id: int,
+    *,
+    fallback_to_piece: bool,
+) -> str:
+    """token-id を Slack 表示用の短い文字列へ戻す。
+
+    SentencePiece の空白 marker だけの token は単体 decode だと空文字に
+    なりやすい。候補 token では見えない表示を避けるため raw piece に戻す。
+    """
+
+    decoded = processor.decode([token_id])
+    if decoded.strip() or not fallback_to_piece:
+        return decoded
+    return processor.id_to_piece(token_id)
+
+
+def display_prompt_tokens(
+    processor: spm.SentencePieceProcessor,
+    token_ids: list[int],
+) -> list[str]:
+    """prompt の token-id 列を、人が読める model token 表示にする。"""
+
+    tokens: list[str] = []
+    for token_id in token_ids:
+        token = display_token(
+            processor,
+            token_id,
+            fallback_to_piece=False,
+        )
+        if token.strip():
+            tokens.append(token)
+    return tokens
+
+
 def filter_top_k(logits: torch.Tensor, top_k: int) -> torch.Tensor:
     """logits のうち上位 top_k 個以外を -inf にして、候補から除外する。
 
@@ -494,6 +530,51 @@ def generate_text(
     )
     # 最後に token id 列を文字列へ戻し、表示用の改行や記号だけを整える。
     return postprocess_generated_text(bundle.tokenizer.decode(output_ids))
+
+
+@torch.no_grad()
+def predict_next_tokens(
+    bundle: ModelBundle,
+    prompt: str,
+    top_n: int,
+) -> dict[str, Any]:
+    """prompt に続く次 token の raw softmax 上位候補を返す。
+
+    生成時の temperature/top-p/top-k や repetition penalty は適用せず、
+    モデルが最後の位置で出した logits をそのまま softmax する。
+    """
+
+    if top_n <= 0:
+        raise ValueError("top_n must be positive")
+
+    input_ids = encode_prompt(bundle.tokenizer, prompt)
+    idx = torch.tensor([input_ids], dtype=torch.long, device=bundle.device)
+    idx_cond = idx[:, -bundle.model.config.block_size :]
+    logits, _ = bundle.model(idx_cond)
+    logits = logits[:, -1, :]
+    probs = F.softmax(logits, dim=-1)
+    values, indices = torch.topk(probs, min(top_n, probs.size(-1)), dim=-1)
+
+    next_tokens: list[dict[str, float | int | str]] = []
+    for probability, token_id_tensor in zip(values[0].tolist(), indices[0].tolist()):
+        token_id = int(token_id_tensor)
+        next_tokens.append(
+            {
+                "id": token_id,
+                "token": display_token(
+                    bundle.tokenizer,
+                    token_id,
+                    fallback_to_piece=True,
+                ),
+                "piece": bundle.tokenizer.id_to_piece(token_id),
+                "probability": float(probability),
+            }
+        )
+
+    return {
+        "tokens": display_prompt_tokens(bundle.tokenizer, input_ids),
+        "next": next_tokens,
+    }
 
 
 def main() -> None:

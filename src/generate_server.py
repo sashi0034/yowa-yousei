@@ -15,10 +15,12 @@ Startup (first line on stdout):
 Request (one JSON object per line on stdin):
 
     {"id": "req-1", "prompt": "...", "max_new_tokens": 200, "temperature": 0.8, ...}
+    {"id": "req-2", "kind": "next_token", "prompt": "...", "top_n": 5}
 
 Response (one JSON object per line on stdout):
 
     {"id": "req-1", "ok": true, "text": "..."}
+    {"id": "req-2", "ok": true, "tokens": ["..."], "next": [{"token": "...", "probability": 0.1}]}
     {"id": "req-1", "ok": false, "error": "..."}
 
 The server exits when stdin is closed.
@@ -50,6 +52,7 @@ from generate import (
     ModelBundle,
     generate_text,
     prepare_bundle,
+    predict_next_tokens,
 )
 
 
@@ -156,6 +159,14 @@ def handle_request(line: str, bundle: ModelBundle, defaults: GenerationOptions) 
         prompt = request.get("prompt")
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is required and must be a non-empty string")
+        kind = request.get("kind", "generate")
+        if kind == "next_token":
+            top_n = int(request.get("top_n", 5))
+            prediction = predict_next_tokens(bundle, prompt, top_n)
+            write_event({"id": request_id, "ok": True, **prediction})
+            return
+        if kind != "generate":
+            raise ValueError(f"unknown request kind: {kind}")
         options = build_options(defaults, request)
         text = generate_text(bundle, prompt, options)
         write_event({"id": request_id, "ok": True, "text": text})

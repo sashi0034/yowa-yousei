@@ -8,6 +8,7 @@ import {
   GenerationServer,
   type GenerationLogger,
   type GenerationServerConfig,
+  type NextTokenPrediction,
 } from "./generation-server.js";
 
 const { App, LogLevel } = bolt;
@@ -30,8 +31,16 @@ type Logger = {
 type QueueItem = {
   channel: string;
   messageTs: string;
+  kind: CommandKind;
   prompt: string;
   hasQueueReaction: boolean;
+};
+
+type CommandKind = "generate" | "predict";
+
+type PromptCommand = {
+  kind: CommandKind;
+  prompt: string;
 };
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
@@ -87,8 +96,8 @@ app.message(async ({ message, client, logger }) => {
     return;
   }
 
-  const prompt = extractPrompt(message.text);
-  if (prompt === null) {
+  const command = extractPromptCommand(message.text);
+  if (command === null) {
     return;
   }
 
@@ -115,7 +124,8 @@ app.message(async ({ message, client, logger }) => {
   queue.push({
     channel,
     messageTs,
-    prompt,
+    kind: command.kind,
+    prompt: command.prompt,
     hasQueueReaction,
   });
 
@@ -150,19 +160,23 @@ async function handleQueueItem(
   logger: Logger,
 ): Promise<void> {
   try {
-    const result = await generationServer.generate(item.prompt);
+    const result =
+      item.kind === "generate"
+        ? await generationServer.generate(item.prompt)
+        : formatNextTokenPrediction(await generationServer.predictNext(item.prompt));
     await client.chat.postMessage({
       channel: item.channel,
-      text: truncateForSlack(result || "(生成結果が空でした)"),
+      text: truncateForSlack(result || emptyResultMessage(item.kind)),
       username: botDisplayName,
     });
   } catch (error) {
+    const label = item.kind === "generate" ? "generation" : "prediction";
     logger.error(
-      `generation failed for ${item.channel}:${item.messageTs}: ${formatError(error)}`,
+      `${label} failed for ${item.channel}:${item.messageTs}: ${formatError(error)}`,
     );
     await client.chat.postMessage({
       channel: item.channel,
-      text: `生成に失敗しました: ${formatError(error)}`,
+      text: `${failureMessage(item.kind)}: ${formatError(error)}`,
       username: botDisplayName,
     });
   } finally {
@@ -188,19 +202,27 @@ async function removeQueueReaction(
   }
 }
 
-function extractPrompt(text: string | undefined): string | null {
+function extractPromptCommand(text: string | undefined): PromptCommand | null {
   if (text === undefined) {
     return null;
   }
 
   const normalized = text.normalize("NFKC").trimStart();
-  const match = normalized.match(/^Q[.。]\s*(?<prompt>[\s\S]*)$/);
+  const match = normalized.match(/^(?<command>[QP])[.。]\s*(?<prompt>[\s\S]*)$/i);
   if (match === null) {
     return null;
   }
 
   const prompt = match.groups?.prompt.trim();
-  return prompt ? prompt : null;
+  if (!prompt) {
+    return null;
+  }
+
+  const command = match.groups?.command.toUpperCase();
+  return {
+    kind: command === "P" ? "predict" : "generate",
+    prompt,
+  };
 }
 
 function isUserMessage(message: unknown): message is {
@@ -268,6 +290,45 @@ function formatError(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function formatNextTokenPrediction(prediction: NextTokenPrediction): string {
+  const tokenLine =
+    prediction.tokens.length > 0
+      ? prediction.tokens.map(formatInlineCode).join("  ")
+      : "(表示できる token がありません)";
+  const nextLines = prediction.next.map((candidate, index) => {
+    const percent = (candidate.probability * 100).toFixed(2);
+    return `  ${index + 1}. ${formatInlineCode(candidate.token)}: ${percent}%`;
+  });
+  return [tokenLine, "next predictions:", ...nextLines].join("\n");
+}
+
+function formatInlineCode(value: string): string {
+  return `\`${escapeSlackText(formatVisibleToken(value))}\``;
+}
+
+function formatVisibleToken(value: string): string {
+  return value
+    .replace(/`/g, "'")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/\t/g, "\\t");
+}
+
+function escapeSlackText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function emptyResultMessage(kind: CommandKind): string {
+  return kind === "generate" ? "(生成結果が空でした)" : "(予測結果が空でした)";
+}
+
+function failureMessage(kind: CommandKind): string {
+  return kind === "generate" ? "生成に失敗しました" : "予測に失敗しました";
 }
 
 function rememberMessage(key: string): void {

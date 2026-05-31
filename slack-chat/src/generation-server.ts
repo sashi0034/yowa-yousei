@@ -23,8 +23,18 @@ export type GenerationLogger = {
   error(message: string): void;
 };
 
+export type NextTokenPrediction = {
+  tokens: string[];
+  next: NextTokenCandidate[];
+};
+
+export type NextTokenCandidate = {
+  token: string;
+  probability: number;
+};
+
 type PendingRequest = {
-  resolve: (text: string) => void;
+  resolve: (response: Record<string, unknown>) => void;
   reject: (error: Error) => void;
   timer: NodeJS.Timeout;
 };
@@ -47,6 +57,28 @@ export class GenerationServer {
   ) {}
 
   async generate(prompt: string): Promise<string> {
+    const response = await this.request({ kind: "generate", prompt });
+    return typeof response.text === "string" ? response.text : "";
+  }
+
+  async predictNext(prompt: string): Promise<NextTokenPrediction> {
+    const response = await this.request({
+      kind: "next_token",
+      prompt,
+      top_n: 5,
+    });
+    return parseNextTokenPrediction(response);
+  }
+
+  shutdown(): void {
+    this.shuttingDown = true;
+    this.clearIdleTimer();
+    this.reset("shutdown requested");
+  }
+
+  private async request(
+    payload: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     this.clearIdleTimer();
     await this.ensureReady();
     const child = this.child;
@@ -55,7 +87,7 @@ export class GenerationServer {
     }
 
     const id = `req-${this.nextId++}`;
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<Record<string, unknown>>((resolve, reject) => {
       const timer = setTimeout(() => {
         if (!this.pending.has(id)) {
           return;
@@ -67,8 +99,8 @@ export class GenerationServer {
 
       this.pending.set(id, { resolve, reject, timer });
 
-      const payload = JSON.stringify({ id, prompt }) + "\n";
-      child.stdin!.write(payload, "utf8", (writeError) => {
+      const line = JSON.stringify({ id, ...payload }) + "\n";
+      child.stdin!.write(line, "utf8", (writeError) => {
         if (writeError === null || writeError === undefined) {
           return;
         }
@@ -81,12 +113,6 @@ export class GenerationServer {
         reject(writeError);
       });
     });
-  }
-
-  shutdown(): void {
-    this.shuttingDown = true;
-    this.clearIdleTimer();
-    this.reset("shutdown requested");
   }
 
   private scheduleIdleShutdownIfQuiet(): void {
@@ -260,8 +286,7 @@ export class GenerationServer {
     this.pending.delete(id);
     this.scheduleIdleShutdownIfQuiet();
     if (message.ok === true) {
-      const text = typeof message.text === "string" ? message.text : "";
-      pending.resolve(text);
+      pending.resolve(message);
       return;
     }
     const errorMessage =
@@ -341,4 +366,35 @@ function addOptionalArg(args: string[], flag: string, value: string | undefined)
   if (value !== undefined && value !== "") {
     args.push(flag, value);
   }
+}
+
+function parseNextTokenPrediction(
+  response: Record<string, unknown>,
+): NextTokenPrediction {
+  const tokens = response.tokens;
+  const next = response.next;
+  if (!Array.isArray(tokens) || !Array.isArray(next)) {
+    throw new Error("prediction response is missing tokens or next");
+  }
+
+  return {
+    tokens: tokens.map((token) => {
+      if (typeof token !== "string") {
+        throw new Error("prediction response contains a non-string prompt token");
+      }
+      return token;
+    }),
+    next: next.map((candidate) => {
+      if (typeof candidate !== "object" || candidate === null) {
+        throw new Error("prediction response contains a non-object candidate");
+      }
+      const record = candidate as Record<string, unknown>;
+      const token = record.token;
+      const probability = record.probability;
+      if (typeof token !== "string" || typeof probability !== "number") {
+        throw new Error("prediction response contains an invalid candidate");
+      }
+      return { token, probability };
+    }),
+  };
 }
